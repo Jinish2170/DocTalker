@@ -40,12 +40,14 @@ DocTalker/
 ## Installation
 
 1. **Clone the repository**:
+
    ```bash
    git clone https://github.com/Jinish2170/DocTalker.git
    cd DocTalker
    ```
 
 2. **Create a virtual environment** (recommended):
+
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
@@ -61,6 +63,7 @@ DocTalker/
 1. **Prepare your PDFs**: Place your PDF files in the `data/raw/` directory.
 
 2. **Run the ingestion pipeline**:
+
    ```python
    from main import ingest_pdfs
    ingest_pdfs()
@@ -78,6 +81,7 @@ For a full example, see `main.py`.
 ## Configuration
 
 Edit `config/settings.py` to customize:
+
 - Model names (e.g., embedding models)
 - Paths to data directories
 - FAISS index parameters
