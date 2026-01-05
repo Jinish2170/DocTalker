@@ -46,3 +46,13 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Database and index files
+weaviate_data/
+embeddings/faiss_index/
+*.db
+*.sqlite
+*.sqlite3
+
+# Processed data
+data/processed/
