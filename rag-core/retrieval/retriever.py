@@ -26,17 +26,31 @@ def get_vector_store():
     
     return vector_store
 
-def retrieve_context(query, k=3):
+# ... imports ...
+
+def retrieve_context(query, k=3, source_filter=None):
     """
-    Searches Weaviate for the top 'k' most similar chunks to the query.
+    Retrieves chunks. 
+    If source_filter is provided (e.g. "resume"), it ONLY looks at those docs.
     """
-    print(f"Searching for: '{query}'...")
+    print(f"Searching Weaviate for: '{query}' (Filter: {source_filter})...")
     
     vector_store = get_vector_store()
     
-    # Perform Similarity Search
-    results = vector_store.similarity_search(query, k=k)
+    # Weaviate Filter Syntax
+    search_kwargs = {"k": k}
     
+    if source_filter:
+        # This tells Weaviate: "Only give me chunks where metadata['source'] contains this string"
+        # Note: This assumes your resume chunks have metadata={"source": "Jinish_Kathiriya_Resume.pdf"}
+        # You might need to adjust the filter value based on your actual filename
+        search_kwargs["filter"] = {
+            "path": ["source"],
+            "operator": "Like",
+            "valueString": f"*{source_filter}*" 
+        }
+    
+    results = vector_store.similarity_search(query, **search_kwargs)
     return results
 
 if __name__ == "__main__":

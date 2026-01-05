@@ -1,37 +1,47 @@
 import sys
 import warnings
-warnings.filterwarnings("ignore", category=ResourceWarning)
+warnings.filterwarnings("ignore")
 
 from retrieval.router import route_query
 from retrieval.web_search import search_web
-from ingestion.web_loader import load_web_page
-from retrieval.qa import generate_answer, format_docs
-from retrieval.retriever import retrieve_context
+from ingestion.scrapers import DynamicWebLoader
+from retrieval.qa import format_docs, generate_answer # Reuse your existing QA logic
 
-# --- NEW: Function to answer using Web Data ---
-# ... inside main.py ...
-
-def answer_with_web(query):
-    # 1. Search & Scrape (One Step)
-    from retrieval.web_search import search_web
+def answer_with_web_playwright(query):
+    # 1. Find Links (DDGS)
+    urls = search_web(query, max_results=2) # Keep it low to save time
     
-    results = search_web(query)
-    if not results:
-        return "I couldn't find anything on the web."
+    if not urls: 
+        return "I couldn't find any relevant links on the web."
 
-    # 2. Format Context
-    # Tavily gave us clean content already
-    context_text = "\n\n".join([f"Source: {r['url']}\nContent: {r['content']}" for r in results])
+    # 2. Scrape Content (Playwright)
+    loader = DynamicWebLoader()
+    # Mute the browser for production feel (set headless=True in scrapers.py if you want)
+    web_docs = []
     
-    print(f"Feeding {len(results)} search results to AI...")
+    print("Scraping content with Playwright...")
+    for url in urls:
+        # Check if url is valid
+        if not url.startswith("http"): continue
+        
+        new_docs = loader.scrape_url(url)
+        if new_docs:
+            web_docs.extend(new_docs)
 
-    # 3. Ask AI
+    if not web_docs: 
+        return "I found links, but the scraper couldn't read them (Anti-bot blockage)."
+
+    # 3. Answer (LLM)
+    # We construct a temporary prompt just for this web answer
+    print(f"Synthesizing answer from {len(web_docs)} pages...")
+    context_text = format_docs(web_docs)
+    
     from langchain_ollama import OllamaLLM
     from langchain_core.prompts import ChatPromptTemplate
     from config.settings import OLLAMA_BASE_URL, LLM_MODEL
-
+    
     llm = OllamaLLM(model=LLM_MODEL, base_url=OLLAMA_BASE_URL)
-    template = """You are a research assistant. Answer strictly based on the provided web context.
+    template = """You are a helpful assistant. Answer the question based strictly on the provided Web Context.
     
     Web Context:
     {context}
@@ -47,32 +57,33 @@ def answer_with_web(query):
 
 
 def start_chat():
-    print("--- Jinish's Answer Engine (Hybrid RAG) ---")
-    print("Type 'exit' to stop.\n")
-
+    print("--- Jinish's Personal RAG (Playwright Edition) ---")
+    print("Type 'exit' to quit.\n")
+    
     while True:
         try:
             user_input = input("You: ")
             if user_input.lower() in ["exit", "quit"]: break
             if not user_input.strip(): continue
 
-            # --- THE ROUTER ---
+            # 1. The Brain (Router)
             target = route_query(user_input)
-            print(f"Routing to: [{target}]")
+            print(f"Routing Decision: [{target}]")
 
             if target == "WEB":
-                response = answer_with_web(user_input)
+                response = answer_with_web_playwright(user_input)
             else:
-                # Use existing QA logic (Weaviate)
+                # Local Resume Search
+                # Note: Ensure you have run 'python -m ingestion.embedder' to load your resume!
                 response = generate_answer(user_input)
 
             print(f"\nAI: {response}\n")
             print("-" * 50)
-
+            
         except KeyboardInterrupt:
             break
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"System Error: {e}")
 
 if __name__ == "__main__":
     start_chat()

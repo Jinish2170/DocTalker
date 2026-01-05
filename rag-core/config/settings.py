@@ -24,7 +24,7 @@ CHUNK_OVERLAP = 100
 OLLAMA_BASE_URL = "http://localhost:11434"
 
 # Your specific models (Check 'ollama list' in terminal to get exact names)
-LLM_MODEL = "phi3"  
+LLM_MODEL = "llama3"  
 EMBEDDING_MODEL = "nomic-embed-text:latest" # <--- IMPORTANT: Change this to what you actually installed!
 
 # Weaviate Settings (Docker)
